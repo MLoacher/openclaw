@@ -26,7 +26,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: openclaw:local
     container_name: openclaw-gateway
     environment:
       HOME: /home/node
@@ -64,7 +63,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: openclaw:local
     container_name: openclaw-cli
     profiles:
       - cli
