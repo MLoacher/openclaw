@@ -58,8 +58,8 @@ services:
       retries: 3
       start_period: 60s
     labels:
-      # Traefik configuration (only active when OPENCLAW_DOMAIN is set)
-      - "traefik.enable=${OPENCLAW_DOMAIN:+true}"
+      # Traefik configuration
+      - "traefik.enable=true"
       - "traefik.http.routers.openclaw.rule=Host(`${OPENCLAW_DOMAIN:-localhost}`)"
       - "traefik.http.routers.openclaw.entrypoints=${OPENCLAW_TRAEFIK_ENTRYPOINT:-websecure}"
       - "traefik.http.routers.openclaw.tls=true"
