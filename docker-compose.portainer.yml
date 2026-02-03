@@ -9,12 +9,18 @@
 #   OPENCLAW_GATEWAY_TOKEN   - Auth token (generate with: openssl rand -hex 32)
 #
 # Optional environment variables:
-#   OPENCLAW_GATEWAY_PORT    - Gateway port (default: 18789)
+#   OPENCLAW_GATEWAY_PORT    - Gateway port (default: 18789, set empty to disable direct port)
 #   OPENCLAW_BRIDGE_PORT     - Bridge port (default: 18790)
 #   OPENCLAW_GATEWAY_BIND    - Bind address: lan|loopback (default: lan)
 #
+# Traefik environment variables (optional):
+#   OPENCLAW_DOMAIN          - Domain for Traefik routing (e.g., openclaw.loacher.com)
+#   OPENCLAW_TRAEFIK_NETWORK - Traefik network name (default: traefik)
+#   OPENCLAW_TRAEFIK_ENTRYPOINT - Traefik entrypoint (default: websecure)
+#   OPENCLAW_TRAEFIK_CERTRESOLVER - Traefik cert resolver (default: letsencrypt)
+#
 # Post-deploy setup:
-#   1. Access Control UI at http://<host>:18789/
+#   1. Access Control UI at http://<host>:18789/ or https://your-domain/
 #   2. Paste your OPENCLAW_GATEWAY_TOKEN in Settings
 #   3. Run onboarding via Portainer console:
 #      docker exec -it <container> node dist/index.js onboard --no-install-daemon
@@ -40,6 +46,9 @@ services:
     ports:
       - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
       - "${OPENCLAW_BRIDGE_PORT:-18790}:18790"
+    networks:
+      - default
+      - traefik
     init: true
     restart: unless-stopped
     healthcheck:
@@ -48,6 +57,15 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    labels:
+      # Traefik configuration (only active when OPENCLAW_DOMAIN is set)
+      - "traefik.enable=${OPENCLAW_DOMAIN:+true}"
+      - "traefik.http.routers.openclaw.rule=Host(`${OPENCLAW_DOMAIN:-localhost}`)"
+      - "traefik.http.routers.openclaw.entrypoints=${OPENCLAW_TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.openclaw.tls=true"
+      - "traefik.http.routers.openclaw.tls.certresolver=${OPENCLAW_TRAEFIK_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.services.openclaw.loadbalancer.server.port=18789"
+      - "traefik.docker.network=${OPENCLAW_TRAEFIK_NETWORK:-traefik}"
     command:
       [
         "node",
@@ -81,3 +99,9 @@ services:
     tty: true
     init: true
     entrypoint: ["node", "dist/index.js"]
+
+networks:
+  default:
+  traefik:
+    external: true
+    name: ${OPENCLAW_TRAEFIK_NETWORK:-traefik}
