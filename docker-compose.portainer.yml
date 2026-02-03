@@ -14,7 +14,6 @@
 #   OPENCLAW_GATEWAY_BIND    - Bind address: lan|loopback (default: lan)
 #   OPENCLAW_SSH_PORT        - SSH port (default: 2222)
 #   OPENCLAW_SSH_PASSWORD    - Password for SSH user 'node'
-#   OPENCLAW_SSH_PUBKEY      - SSH public key for user 'node' (key-based auth)
 #
 # Traefik environment variables (optional):
 #   OPENCLAW_DOMAIN          - Domain for Traefik routing (e.g., openclaw.loacher.com)
@@ -43,7 +42,6 @@ services:
       TERM: xterm-256color
       OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:?Set OPENCLAW_GATEWAY_TOKEN in Portainer env vars}
       OPENCLAW_SSH_PASSWORD: ${OPENCLAW_SSH_PASSWORD:-}
-      OPENCLAW_SSH_PUBKEY: ${OPENCLAW_SSH_PUBKEY:-}
       CLAUDE_AI_SESSION_KEY: ${CLAUDE_AI_SESSION_KEY:-}
       CLAUDE_WEB_SESSION_KEY: ${CLAUDE_WEB_SESSION_KEY:-}
       CLAUDE_WEB_COOKIE: ${CLAUDE_WEB_COOKIE:-}

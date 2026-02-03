@@ -54,15 +54,6 @@ if [ -n "$OPENCLAW_SSH_PASSWORD" ]; then
     echo "node:$OPENCLAW_SSH_PASSWORD" | chpasswd
 fi
 
-# Add SSH public key if provided
-if [ -n "$OPENCLAW_SSH_PUBKEY" ]; then
-    mkdir -p /home/node/.ssh
-    echo "$OPENCLAW_SSH_PUBKEY" > /home/node/.ssh/authorized_keys
-    chmod 700 /home/node/.ssh
-    chmod 600 /home/node/.ssh/authorized_keys
-    chown -R node:node /home/node/.ssh
-fi
-
 # Start SSH daemon
 /usr/sbin/sshd
 
