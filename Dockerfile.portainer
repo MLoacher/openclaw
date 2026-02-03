@@ -1,0 +1,82 @@
+FROM node:22-bookworm
+
+# Install Bun (required for build scripts) and SSH server
+RUN curl -fsSL https://bun.sh/install | bash && \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openssh-server && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
+ENV PATH="/root/.bun/bin:${PATH}"
+
+RUN corepack enable
+
+# Configure SSH
+RUN mkdir -p /var/run/sshd && \
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config && \
+    echo "AllowUsers node" >> /etc/ssh/sshd_config
+
+WORKDIR /app
+
+ARG OPENCLAW_DOCKER_APT_PACKAGES=""
+RUN if [ -n "$OPENCLAW_DOCKER_APT_PACKAGES" ]; then \
+      apt-get update && \
+      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $OPENCLAW_DOCKER_APT_PACKAGES && \
+      apt-get clean && \
+      rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
+    fi
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY ui/package.json ./ui/package.json
+COPY patches ./patches
+COPY scripts ./scripts
+
+RUN pnpm install --frozen-lockfile
+
+COPY . .
+RUN OPENCLAW_A2UI_SKIP_MISSING=1 pnpm build
+ENV OPENCLAW_PREFER_PNPM=1
+RUN pnpm ui:build
+
+ENV NODE_ENV=production
+
+# Allow non-root user to write temp files during runtime/tests
+RUN chown -R node:node /app
+
+# Create entrypoint script that starts SSH and the gateway
+COPY --chmod=755 <<'EOF' /entrypoint.sh
+#!/bin/bash
+set -e
+
+# Set node user password if provided
+if [ -n "$OPENCLAW_SSH_PASSWORD" ]; then
+    echo "node:$OPENCLAW_SSH_PASSWORD" | chpasswd
+fi
+
+# Add SSH public key if provided
+if [ -n "$OPENCLAW_SSH_PUBKEY" ]; then
+    mkdir -p /home/node/.ssh
+    echo "$OPENCLAW_SSH_PUBKEY" > /home/node/.ssh/authorized_keys
+    chmod 700 /home/node/.ssh
+    chmod 600 /home/node/.ssh/authorized_keys
+    chown -R node:node /home/node/.ssh
+fi
+
+# Start SSH daemon
+/usr/sbin/sshd
+
+# Run the main command as node user
+exec gosu node "$@"
+EOF
+
+# Install gosu for dropping privileges
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gosu && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+EXPOSE 22
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["node", "dist/index.js", "gateway", "--allow-unconfigured", "--bind", "lan", "--port", "18789"]

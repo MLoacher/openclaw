@@ -20,6 +20,9 @@ Deploy OpenClaw to Portainer using GitOps.
    | `OPENCLAW_GATEWAY_PORT` | No | Gateway port (default: `18789`) |
    | `OPENCLAW_BRIDGE_PORT` | No | Bridge port (default: `18790`) |
    | `OPENCLAW_GATEWAY_BIND` | No | Bind address: `lan` or `loopback` (default: `lan`) |
+   | `OPENCLAW_SSH_PORT` | No | SSH port (default: `2223`) |
+   | `OPENCLAW_SSH_PASSWORD` | No | Password for SSH user `node` |
+   | `OPENCLAW_SSH_PUBKEY` | No | SSH public key for user `node` (key-based auth) |
 
 3. **Deploy Stack**
    - Click "Deploy the stack"
@@ -46,6 +49,22 @@ docker exec -it openclaw-gateway node dist/index.js channels add --channel teleg
 
 # Discord
 docker exec -it openclaw-gateway node dist/index.js channels add --channel discord --token <BOT_TOKEN>
+```
+
+## SSH Access
+
+SSH into the container on port 2222 (default) as user `node`.
+
+**Option 1: Password authentication**
+Set `OPENCLAW_SSH_PASSWORD` in Portainer environment variables, then:
+```bash
+ssh -p 2222 node@<host>
+```
+
+**Option 2: Key-based authentication (recommended)**
+Set `OPENCLAW_SSH_PUBKEY` to your public key (contents of `~/.ssh/id_rsa.pub` or `~/.ssh/id_ed25519.pub`):
+```bash
+ssh -p 2222 node@<host>
 ```
 
 ## Reverse Proxy Setup (Traefik)
