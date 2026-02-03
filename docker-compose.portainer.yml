@@ -15,9 +15,8 @@
 #
 # Traefik environment variables (optional):
 #   OPENCLAW_DOMAIN          - Domain for Traefik routing (e.g., openclaw.loacher.com)
-#   OPENCLAW_TRAEFIK_NETWORK - Traefik network name (default: traefik)
 #   OPENCLAW_TRAEFIK_ENTRYPOINT - Traefik entrypoint (default: websecure)
-#   OPENCLAW_TRAEFIK_CERTRESOLVER - Traefik cert resolver (default: letsencrypt)
+#   OPENCLAW_TRAEFIK_CERTRESOLVER - Traefik cert resolver (default: cloudflare)
 #
 # Post-deploy setup:
 #   1. Access Control UI at http://<host>:18789/ or https://your-domain/
@@ -33,6 +32,9 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: openclaw-gateway
+    restart: unless-stopped
+    networks:
+      - proxy
     environment:
       HOME: /home/node
       TERM: xterm-256color
@@ -46,26 +48,14 @@ services:
     ports:
       - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
       - "${OPENCLAW_BRIDGE_PORT:-18790}:18790"
-    networks:
-      - default
-      - traefik
     init: true
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "node", "dist/index.js", "health", "--token", "${OPENCLAW_GATEWAY_TOKEN}"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
     labels:
-      # Traefik configuration
       - "traefik.enable=true"
       - "traefik.http.routers.openclaw.rule=Host(`${OPENCLAW_DOMAIN:-localhost}`)"
       - "traefik.http.routers.openclaw.entrypoints=${OPENCLAW_TRAEFIK_ENTRYPOINT:-websecure}"
-      - "traefik.http.routers.openclaw.tls=true"
-      - "traefik.http.routers.openclaw.tls.certresolver=${OPENCLAW_TRAEFIK_CERTRESOLVER:-letsencrypt}"
+      - "traefik.http.routers.openclaw.tls.certresolver=${OPENCLAW_TRAEFIK_CERTRESOLVER:-cloudflare}"
+      - "traefik.http.routers.openclaw.service=openclaw"
       - "traefik.http.services.openclaw.loadbalancer.server.port=18789"
-      - "traefik.docker.network=${OPENCLAW_TRAEFIK_NETWORK:-traefik}"
     command:
       [
         "node",
@@ -102,7 +92,5 @@ services:
     entrypoint: ["node", "dist/index.js"]
 
 networks:
-  default:
-  traefik:
+  proxy:
     external: true
-    name: ${OPENCLAW_TRAEFIK_NETWORK:-traefik}
