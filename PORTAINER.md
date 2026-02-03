@@ -48,6 +48,48 @@ docker exec -it openclaw-gateway node dist/index.js channels add --channel teleg
 docker exec -it openclaw-gateway node dist/index.js channels add --channel discord --token <BOT_TOKEN>
 ```
 
+## Reverse Proxy Setup (Traefik)
+
+If using a reverse proxy like Traefik, you need to configure trusted proxies to avoid "pairing required" errors.
+
+**Before deploying**, create the config file on your host:
+
+```bash
+# Create directories
+mkdir -p /opt/openclaw/config /opt/openclaw/workspace
+chown -R 1000:1000 /opt/openclaw
+
+# Create config for reverse proxy
+cat > /opt/openclaw/config/openclaw.json << 'EOF'
+{
+  "gateway": {
+    "mode": "local",
+    "bind": "lan",
+    "port": 18789,
+    "controlUi": {
+      "enabled": true,
+      "allowInsecureAuth": true
+    },
+    "auth": {
+      "mode": "token"
+    },
+    "trustedProxies": ["172.16.0.0/12", "192.168.0.0/16", "10.0.0.0/8"]
+  }
+}
+EOF
+chown 1000:1000 /opt/openclaw/config/openclaw.json
+```
+
+Set these additional environment variables in Portainer:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OPENCLAW_DOMAIN` | Yes | Your domain (e.g., `openclaw.example.com`) |
+| `OPENCLAW_TRAEFIK_ENTRYPOINT` | No | Traefik entrypoint (default: `websecure`) |
+| `OPENCLAW_TRAEFIK_CERTRESOLVER` | No | Traefik cert resolver (default: `cloudflare`) |
+
+Access the Control UI at `https://your-domain/?token=YOUR_GATEWAY_TOKEN`
+
 ## Updating
 
 In Portainer:
