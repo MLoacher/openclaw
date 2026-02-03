@@ -1,7 +1,39 @@
-# Repository Guidelines
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Repository
 
 - Repo: https://github.com/openclaw/openclaw
 - GitHub issues/comments/PR comments: use literal multiline strings or `-F - <<'EOF'` (or $'...') for real newlines; never embed "\\n".
+
+## Architecture Overview
+
+OpenClaw is a personal AI assistant platform with a local-first Gateway as the control plane:
+
+```
+Channels (WhatsApp/Telegram/Slack/Discord/Signal/iMessage/Teams/Matrix/etc.)
+                              │
+                              ▼
+                  ┌───────────────────────┐
+                  │       Gateway         │  ← WebSocket control plane (ws://127.0.0.1:18789)
+                  │  src/gateway/         │
+                  └───────────┬───────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+        ▼                     ▼                     ▼
+   Pi Agent (RPC)        CLI Commands         Native Apps
+   src/agents/           src/commands/        apps/macos, ios, android
+```
+
+**Key subsystems:**
+- **Gateway** (`src/gateway/`): WebSocket server, session management, channel routing, config, cron, webhooks
+- **Channels** (`src/telegram/`, `src/discord/`, `src/slack/`, `src/signal/`, `src/imessage/`, `src/web/`): Messaging integrations
+- **Agents** (`src/agents/`): Pi agent runtime, tool execution, session transcripts
+- **CLI** (`src/cli/`, `src/commands/`): Command-line interface wiring and commands
+- **Extensions** (`extensions/`): Plugin channels (msteams, matrix, zalo, voice-call, etc.)
+- **Apps** (`apps/`): Native macOS menu bar app, iOS/Android nodes
 
 ## Project Structure & Module Organization
 
@@ -52,6 +84,9 @@
 - Type-check/build: `pnpm build`
 - Lint/format: `pnpm check`
 - Tests: `pnpm test` (vitest); coverage: `pnpm test:coverage`
+- Run a single test file: `pnpm test src/path/to/file.test.ts`
+- Run tests matching a pattern: `pnpm test -t "test name pattern"`
+- Watch mode: `pnpm test:watch`
 
 ## Coding Style & Naming Conventions
 

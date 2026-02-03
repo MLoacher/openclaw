@@ -1,0 +1,85 @@
+# OpenClaw Portainer Stack
+#
+# This docker-compose file is designed for Portainer GitOps deployment.
+# Point Portainer to this repo and use this compose file.
+#
+# Required environment variables (set in Portainer stack config):
+#   OPENCLAW_CONFIG_DIR      - Host path for config (e.g., /opt/openclaw/config)
+#   OPENCLAW_WORKSPACE_DIR   - Host path for workspace (e.g., /opt/openclaw/workspace)
+#   OPENCLAW_GATEWAY_TOKEN   - Auth token (generate with: openssl rand -hex 32)
+#
+# Optional environment variables:
+#   OPENCLAW_GATEWAY_PORT    - Gateway port (default: 18789)
+#   OPENCLAW_BRIDGE_PORT     - Bridge port (default: 18790)
+#   OPENCLAW_GATEWAY_BIND    - Bind address: lan|loopback (default: lan)
+#
+# Post-deploy setup:
+#   1. Access Control UI at http://<host>:18789/
+#   2. Paste your OPENCLAW_GATEWAY_TOKEN in Settings
+#   3. Run onboarding via Portainer console:
+#      docker exec -it <container> node dist/index.js onboard --no-install-daemon
+#
+# Docs: https://docs.openclaw.ai/install/docker
+
+services:
+  openclaw-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: openclaw:local
+    container_name: openclaw-gateway
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:?Set OPENCLAW_GATEWAY_TOKEN in Portainer env vars}
+      CLAUDE_AI_SESSION_KEY: ${CLAUDE_AI_SESSION_KEY:-}
+      CLAUDE_WEB_SESSION_KEY: ${CLAUDE_WEB_SESSION_KEY:-}
+      CLAUDE_WEB_COOKIE: ${CLAUDE_WEB_COOKIE:-}
+    volumes:
+      - ${OPENCLAW_CONFIG_DIR:?Set OPENCLAW_CONFIG_DIR in Portainer env vars}:/home/node/.openclaw
+      - ${OPENCLAW_WORKSPACE_DIR:?Set OPENCLAW_WORKSPACE_DIR in Portainer env vars}:/home/node/.openclaw/workspace
+    ports:
+      - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"
+      - "${OPENCLAW_BRIDGE_PORT:-18790}:18790"
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "dist/index.js", "health", "--token", "${OPENCLAW_GATEWAY_TOKEN}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    command:
+      [
+        "node",
+        "dist/index.js",
+        "gateway",
+        "--bind",
+        "${OPENCLAW_GATEWAY_BIND:-lan}",
+        "--port",
+        "18789",
+      ]
+
+  openclaw-cli:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: openclaw:local
+    container_name: openclaw-cli
+    profiles:
+      - cli
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-}
+      BROWSER: echo
+      CLAUDE_AI_SESSION_KEY: ${CLAUDE_AI_SESSION_KEY:-}
+      CLAUDE_WEB_SESSION_KEY: ${CLAUDE_WEB_SESSION_KEY:-}
+      CLAUDE_WEB_COOKIE: ${CLAUDE_WEB_COOKIE:-}
+    volumes:
+      - ${OPENCLAW_CONFIG_DIR:-/opt/openclaw/config}:/home/node/.openclaw
+      - ${OPENCLAW_WORKSPACE_DIR:-/opt/openclaw/workspace}:/home/node/.openclaw/workspace
+    stdin_open: true
+    tty: true
+    init: true
+    entrypoint: ["node", "dist/index.js"]
