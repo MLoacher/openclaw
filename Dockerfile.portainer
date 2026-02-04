@@ -44,6 +44,14 @@ ENV NODE_ENV=production
 # Allow non-root user to write temp files during runtime/tests
 RUN chown -R node:node /app
 
+# Create symlink so 'openclaw' command works globally
+RUN ln -s /app/openclaw.mjs /usr/local/bin/openclaw && chmod +x /app/openclaw.mjs
+
+# Add /app to PATH for node user's bash profile
+RUN echo 'export PATH="/app:$PATH"' >> /home/node/.bashrc && \
+    echo 'cd /home/node/.openclaw' >> /home/node/.bashrc && \
+    chown node:node /home/node/.bashrc
+
 # Create entrypoint script that starts SSH and the gateway
 COPY --chmod=755 <<'EOF' /entrypoint.sh
 #!/bin/bash
