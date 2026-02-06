@@ -56,11 +56,18 @@ services:
     init: true
     labels:
       - "traefik.enable=true"
+      # Main gateway service (port 18789)
       - "traefik.http.routers.openclaw.rule=Host(`${OPENCLAW_DOMAIN:-localhost}`)"
       - "traefik.http.routers.openclaw.entrypoints=${OPENCLAW_TRAEFIK_ENTRYPOINT:-websecure}"
       - "traefik.http.routers.openclaw.tls.certresolver=${OPENCLAW_TRAEFIK_CERTRESOLVER:-cloudflare}"
       - "traefik.http.routers.openclaw.service=openclaw"
       - "traefik.http.services.openclaw.loadbalancer.server.port=18789"
+      # CDP service (port 18792) - separate subdomain
+      - "traefik.http.routers.openclaw-cdp.rule=Host(`${OPENCLAW_CDP_DOMAIN:-openclaw-cdp.loacher.com}`)"
+      - "traefik.http.routers.openclaw-cdp.entrypoints=${OPENCLAW_TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.openclaw-cdp.tls.certresolver=${OPENCLAW_TRAEFIK_CERTRESOLVER:-cloudflare}"
+      - "traefik.http.routers.openclaw-cdp.service=openclaw-cdp"
+      - "traefik.http.services.openclaw-cdp.loadbalancer.server.port=18792"
     command:
       [
         "node",
