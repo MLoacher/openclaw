@@ -29,6 +29,15 @@
 # Docs: https://docs.openclaw.ai/install/docker
 
 services:
+  cdp-proxy:
+    image: alpine/socat
+    container_name: cdp-proxy
+    restart: unless-stopped
+    network_mode: "service:openclaw-gateway"
+    depends_on:
+      - openclaw-gateway
+    command: TCP-LISTEN:18793,fork,reuseaddr TCP:127.0.0.1:18792
+
   openclaw-gateway:
     build:
       context: .
@@ -67,7 +76,7 @@ services:
       - "traefik.http.routers.openclaw-cdp.entrypoints=${OPENCLAW_TRAEFIK_ENTRYPOINT:-websecure}"
       - "traefik.http.routers.openclaw-cdp.tls.certresolver=${OPENCLAW_TRAEFIK_CERTRESOLVER:-cloudflare}"
       - "traefik.http.routers.openclaw-cdp.service=openclaw-cdp"
-      - "traefik.http.services.openclaw-cdp.loadbalancer.server.port=18792"
+      - "traefik.http.services.openclaw-cdp.loadbalancer.server.port=18793"
     command:
       [
         "node",
